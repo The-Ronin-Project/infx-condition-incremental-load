@@ -193,6 +193,13 @@ class ValueSetVersion:
         return list(terminologies.values())
 
 
+@dataclass
+class Mapping:
+    source_concept: Concept
+    target_concept: Concept
+    relationship: str
+
+
 class ConceptMap:
     def __init__(self, uuid):
         self.uuid = uuid
@@ -202,15 +209,17 @@ class ConceptMapVersion:
     def __init__(self,
                  uuid,
                  source_value_set_version: ValueSetVersion,
-                 target_value_set_version: ValueSetVersion):
+                 target_value_set_version: ValueSetVersion,
+                 mappings: List[Mapping] = None):
         self.uuid = uuid
         self.source_value_set_version = source_value_set_version
         self.target_value_set_version = target_value_set_version
+        self.mappings = mappings if mappings is not None else []
 
     @classmethod
-    def load(cls, concept_map_uuid, version, include_internal_info):
+    def load(cls, concept_map_uuid, version):
         # Make request to /ConceptMaps/:concept_map_uuid:version:include_internal_info
-        concept_map_request = requests.get(f"{BASE_URL}/ConceptMaps/?concept_map_uuid={concept_map_uuid}&version={version}&include_internal_info={include_internal_info}")
+        concept_map_request = requests.get(f"{BASE_URL}/ConceptMaps/?concept_map_uuid={concept_map_uuid}&version={version}&include_internal_info=true")
         concept_map_request.raise_for_status()  # ensure we notice bad responses
         json_data = concept_map_request.json()
 
@@ -224,9 +233,40 @@ class ConceptMapVersion:
 
         source_value_set_version = ValueSetVersion.load(source_value_set_version_uuid)
         target_value_set_version = ValueSetVersion.load(target_value_set_version_uuid)
+
+        # Deserialize mappings
+        mappings = []
+        for group in json.get('group', []):
+            source_system = group.get('source')
+            source_version = group.get('sourceVersion')
+            target_system = group.get('target')
+            target_version = group.get('targetVersion')
+            for element in group.get('element', []):
+                source_code = element.get('code')
+                source_display = element.get('display')
+                source_concept = Concept(
+                    code=source_code,
+                    display=source_display,
+                    system=source_system,
+                    version=source_version
+                )
+                for target in element.get('target', []):
+                    target_code = target.get('code')
+                    target_display = target.get('display')
+                    target_concept = Concept(
+                        code=target_code,
+                        display=target_display,
+                        system=target_system,
+                        version=target_version
+                    )
+                    mappings.append(Mapping(source_concept=source_concept,
+                                            target_concept=target_concept,
+                                            relationship=target.get('equivalence')))
+
         return cls(uuid=uuid,
                    source_value_set_version=source_value_set_version,
-                   target_value_set_version=target_value_set_version)
+                   target_value_set_version=target_value_set_version,
+                   mappings=mappings)
 
     def new_version(self, previous_version_uuid: str, new_version_description: str, new_version_num: int,
                     new_source_value_set_version_uuid: str, new_target_value_set_version_uuid: str):

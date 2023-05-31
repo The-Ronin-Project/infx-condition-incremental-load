@@ -51,3 +51,12 @@ def test_load_value_set_version():
     assert terminology1.fhir_uri == "http://hl7.org/fhir/sid/icd-10-cm"
     assert terminology2.version == "2023-03-01"
     assert terminology2.fhir_uri == "http://snomed.info/sct"
+
+def test_load_concept_map_version():
+    TEST_CONDITION_INCREMENTAL_CONCEPT_MAP_UUID = 'ae61ee9b-3f55-4d3c-96e7-8c7194b53767'
+    TEST_VERSION = '2'
+    concept_map_version = ConceptMapVersion.load(TEST_CONDITION_INCREMENTAL_CONCEPT_MAP_UUID, TEST_VERSION)
+
+    # todo: test the data to make sure it is correct
+    assert len(concept_map_version.mappings) == 3
+
