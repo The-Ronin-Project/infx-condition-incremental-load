@@ -30,7 +30,7 @@ def load_concepts_from_errors() -> Dict[Tuple[Organization, ResourceType], List[
 #     pass
 
 
-if __name__ == "__main__":
+def process_errors():
     concepts_to_load = load_concepts_from_errors()
 
     for key, concept_list in concepts_to_load.items():
@@ -56,20 +56,27 @@ if __name__ == "__main__":
         source_terminology = source_terminologies[0]
 
         # Add new codes to terminology
-        source_terminology.load_additional_concepts(concept_list)
+        # todo: implement logic to create new terminology version, if necessary
+        new_terminology_version = False
+        try:
+            source_terminology.load_additional_concepts(concept_list)
+        except:
+            pass
+            new_terminology_version = True
 
         # todo: Create new value set version
         new_source_value_set_version = source_value_set_version.new_version()
-        new_source_value_set_version.update_rules_for_new_terminology_version(
-            old_terminology_version_uuid=None,
-            new_terminology_version_uuid=None
-        )
+
+        if new_terminology_version:
+            new_source_value_set_version.update_rules_for_new_terminology_version(    # todo: only applicable if you had to create a new terminology version
+                old_terminology_version_uuid=None,
+                new_terminology_version_uuid=None
+            )
 
         # todo: Publish new value set version
         new_source_value_set_version.publish()
 
         # todo: Create new concept map version
         new_concept_map_version = concept_map_version.new_version()
-        new_concept_map_version.publish()
 
         # todo: register new data in appropriate queue for triaging
