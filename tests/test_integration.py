@@ -22,14 +22,18 @@ def test_incremental_load_integration():
 
     mock_error_concept_data = {(organization, resource_type): generate_sample_concepts()}
 
-    mock_registry_lookup = ConceptMapVersion.load('')
+    concept_map_uuid = 'ae61ee9b-3f55-4d3c-96e7-8c7194b53767'
+    version = 1
+    include_internal_info = True
+
+    mock_registry_lookup = ConceptMapVersion.load(concept_map_uuid, version, include_internal_info)
 
     # Mock the load_concepts_from_errors function to return the mock_data
     with patch('infx_condition_incremental_load.main.load_concepts_from_errors',
                return_value=mock_error_concept_data) as load_concepts_from_errors_mock:
 
         with patch('infx_condition_incremental_load.terminology_resources.lookup_concept_map_version_for_resource_type',
-                   return_value=mock_error_concept_data) as lookup_concept_map_version_for_resource_type_mock:
+                   return_value=mock_registry_lookup) as lookup_concept_map_version_for_resource_type_mock:
             # Run the process
             process_errors()
 

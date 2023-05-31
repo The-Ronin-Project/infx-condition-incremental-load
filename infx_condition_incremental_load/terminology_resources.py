@@ -208,9 +208,9 @@ class ConceptMapVersion:
         self.target_value_set_version = target_value_set_version
 
     @classmethod
-    def load(cls, concept_map_version_uuid):
-        # Make request to /ConceptMaps/:concept_map_version_uuid
-        concept_map_request = requests.get(f"{BASE_URL}/ConceptMaps/{concept_map_version_uuid}")
+    def load(cls, concept_map_uuid, version, include_internal_info):
+        # Make request to /ConceptMaps/:concept_map_uuid:version:include_internal_info
+        concept_map_request = requests.get(f"{BASE_URL}/ConceptMaps/?concept_map_uuid={concept_map_uuid}&version={version}&include_internal_info={include_internal_info}")
         concept_map_request.raise_for_status()  # ensure we notice bad responses
         json_data = concept_map_request.json()
 
