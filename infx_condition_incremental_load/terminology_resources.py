@@ -8,6 +8,7 @@ from infx_condition_incremental_load.core_data_types import *
 
 BASE_URL = config("INTERNAL_TOOLS_API_BASE_URL")
 
+
 @dataclass
 class Concept:
     code: str
@@ -62,6 +63,13 @@ class Terminology:
             # Now that the concept is loaded, we can add it to the local list
             self.codes.append(Concept(**concept_dict))
 
+    @staticmethod
+    def load_terminology_concepts(uuid):
+        url = f"{BASE_URL}/terminology/{uuid}"
+        response = requests.get(url)
+        response.raise_for_status()  # ensure we notice bad responses
+        json_object = response.json()
+        return json_object
 
 @dataclass
 class Expansion:
@@ -219,7 +227,8 @@ class ConceptMapVersion:
     @classmethod
     def load(cls, concept_map_uuid, version):
         # Make request to /ConceptMaps/:concept_map_uuid:version:include_internal_info
-        concept_map_request = requests.get(f"{BASE_URL}/ConceptMaps/?concept_map_uuid={concept_map_uuid}&version={version}&include_internal_info=true")
+        concept_map_request = requests.get(
+            f"{BASE_URL}/ConceptMaps/?concept_map_uuid={concept_map_uuid}&version={version}&include_internal_info=true")
         concept_map_request.raise_for_status()  # ensure we notice bad responses
         json_data = concept_map_request.json()
 
@@ -329,7 +338,7 @@ def lookup_concept_map_version_for_resource_type(resource_type: ResourceType,
     tenant_agnostic = [x for x in filtered_registry if x.get('tenant_id') is None]
     if len(tenant_agnostic) > 0:
         concept_map_uuid = tenant_agnostic[0].get('concept_map_uuid')
-        concept_map_version  = tenant_agnostic[0].get('version')
+        concept_map_version = tenant_agnostic[0].get('version')
 
     if concept_map_uuid is None or concept_map_version is None:
         raise Exception("No appropriate registry entry found")
@@ -341,4 +350,3 @@ def lookup_concept_map_version_for_resource_type(resource_type: ResourceType,
     })
     concept_map_request.raise_for_status()
     return ConceptMapVersion.deserialize(concept_map_request.json())
-

@@ -38,7 +38,7 @@ def test_incremental_load_integration():
             process_errors()
 
     # Verify new code is in code system
-    added_concepts = load_concepts_from_source_terminology(source_terminology_uuid)
+    added_concepts = load_terminology_concepts(source_terminology_uuid)
     assert len(added_concepts) == len(generate_sample_concepts)
     for concept in added_concepts:
         sample_concepts = generate_sample_concepts()
