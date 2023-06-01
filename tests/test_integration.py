@@ -31,10 +31,10 @@ def test_incremental_load_integration():
 
     # Mock the load_concepts_from_errors function to return the mock_data
     with patch('infx_condition_incremental_load.main.load_concepts_from_errors',
-               return_value=mock_error_concept_data) as load_concepts_from_errors_mock:
+               return_value=mock_error_concept_data):
 
-        with patch('infx_condition_incremental_load.terminology_resources.lookup_concept_map_version_for_resource_type',
-                   return_value=mock_registry_lookup) as lookup_concept_map_version_for_resource_type_mock:
+        with patch('infx_condition_incremental_load.main.lookup_concept_map_version_for_resource_type',
+                   return_value=mock_registry_lookup):
             # Run the process
             process_errors()
 

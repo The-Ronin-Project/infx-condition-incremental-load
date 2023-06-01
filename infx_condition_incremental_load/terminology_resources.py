@@ -50,14 +50,13 @@ class Terminology:
 
     def load_additional_concepts(self, concepts: List[Concept]):
         url = f"{BASE_URL}/terminology/new_code"
-        headers = {'Content-Type': 'application/json'}
 
         # Convert concepts to list of dictionaries
         concepts_dict = [dataclasses.asdict(concept) for concept in concepts]
 
         for concept_dict in concepts_dict:
             concept_dict['terminology_version_uuid'] = self.uuid
-            response = requests.post(url, headers=headers, data=json.dumps(concept_dict))
+            response = requests.post(url, json=concept_dict)
             response.raise_for_status()  # ensure we notice bad responses
 
             # Now that the concept is loaded, we can add it to the local list
@@ -150,9 +149,6 @@ class ValueSetVersion:
         response = requests.post(url, json=data)
         response.raise_for_status()  # ensure we notice bad responses
 
-        # Return the response JSON, in case it's needed
-        return response.json()
-
     def update_rules_for_new_terminology_version(self, old_terminology_version_uuid: str,
                                                  new_terminology_version_uuid: str):
         url = f"{BASE_URL}/ValueSets/_/versions/{self.id}/rules/update_terminology"
@@ -191,7 +187,6 @@ class ValueSetVersion:
                 # in the Concept class. Ideally, these values should come from appropriate sources.
                 terminologies[key] = Terminology(
                     uuid=None,
-                    name=None,
                     version=concept.version,
                     effective_start=None,
                     effective_end=None,

@@ -60,12 +60,12 @@ def process_errors():
         new_terminology_version = False
         try:
             source_terminology.load_additional_concepts(concept_list)
-        except:
-            pass
+        except Exception as e:
             new_terminology_version = True
+            raise e
 
         # todo: Create new value set version
-        new_source_value_set_version = source_value_set_version.new_version()
+        new_source_value_set_version = source_value_set_version.new_version("new version created by the condition incremental load system")
 
         if new_terminology_version:
             new_source_value_set_version.update_rules_for_new_terminology_version(    # todo: only applicable if you had to create a new terminology version
