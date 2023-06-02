@@ -56,11 +56,12 @@ class Terminology:
 
         for concept_dict in concepts_dict:
             concept_dict['terminology_version_uuid'] = self.uuid
+            concept_dict['additional_data'] = {}
             response = requests.post(url, json=concept_dict)
             response.raise_for_status()  # ensure we notice bad responses
 
             # Now that the concept is loaded, we can add it to the local list
-            self.codes.append(Concept(**concept_dict))
+            self.codes.extend(concepts)
 
     @staticmethod
     def load_terminology_concepts(uuid):
@@ -69,6 +70,24 @@ class Terminology:
         response.raise_for_status()  # ensure we notice bad responses
         json_object = response.json()
         return json_object
+
+    @classmethod
+    def load_by_fhir_uri_and_version(cls, fhir_uri, version):
+        url = f"{BASE_URL}/terminology/"
+        response = requests.get(url, params={
+            'fhir_uri': fhir_uri,
+            'version': version
+        })
+        response.raise_for_status()
+        response_json = response.json()
+        return cls(
+            uuid=response_json.get('uuid'),
+            name=response_json.get('name'),
+            version=response_json.get('version'),
+            effective_start=response_json.get('effective_start'),
+            effective_end=response_json.get('effective_end'),
+            fhir_uri=response_json.get('fhir_uri'),
+        )
 
 @dataclass
 class Expansion:
@@ -149,6 +168,8 @@ class ValueSetVersion:
         response = requests.post(url, json=data)
         response.raise_for_status()  # ensure we notice bad responses
 
+        return ValueSetVersion.load(response.text)
+
     def update_rules_for_new_terminology_version(self, old_terminology_version_uuid: str,
                                                  new_terminology_version_uuid: str):
         url = f"{BASE_URL}/ValueSets/_/versions/{self.id}/rules/update_terminology"
@@ -167,7 +188,7 @@ class ValueSetVersion:
         return response.json()
 
     def publish(self):
-        url = f"{BASE_URL}/ValueSets/{self.id}/published"
+        url = f"{BASE_URL}/ValueSets/{self.additional_data.get('version_uuid')}/published"
 
         # Make the request
         response = requests.post(url)
@@ -185,12 +206,9 @@ class ValueSetVersion:
                 # For the sake of this implementation, we will use dummy values for
                 # uuid, name, effective_start, effective_end, as these values are not available
                 # in the Concept class. Ideally, these values should come from appropriate sources.
-                terminologies[key] = Terminology(
-                    uuid=None,
-                    version=concept.version,
-                    effective_start=None,
-                    effective_end=None,
-                    fhir_uri=concept.system
+                terminologies[key] = Terminology.load_by_fhir_uri_and_version(
+                    fhir_uri=concept.system,
+                    version=concept.version
                 )
 
         return list(terminologies.values())
@@ -211,10 +229,12 @@ class ConceptMap:
 class ConceptMapVersion:
     def __init__(self,
                  uuid,
+                 version: int,
                  source_value_set_version: ValueSetVersion,
                  target_value_set_version: ValueSetVersion,
                  mappings: List[Mapping] = None):
         self.uuid = uuid
+        self.version = version
         self.source_value_set_version = source_value_set_version
         self.target_value_set_version = target_value_set_version
         self.mappings = mappings if mappings is not None else []
@@ -232,6 +252,8 @@ class ConceptMapVersion:
     @classmethod
     def deserialize(cls, json):
         uuid = json.get('id')
+        version = int(json.get('version'))
+
         source_value_set_version_uuid = json.get('internalData').get('source_value_set_version_uuid')
         target_value_set_version_uuid = json.get('internalData').get('target_value_set_version_uuid')
 
@@ -268,22 +290,24 @@ class ConceptMapVersion:
                                             relationship=target.get('equivalence')))
 
         return cls(uuid=uuid,
+                   version=version,
                    source_value_set_version=source_value_set_version,
                    target_value_set_version=target_value_set_version,
                    mappings=mappings)
 
-    def new_version(self, previous_version_uuid: str, new_version_description: str, new_version_num: int,
+    def new_version(self, new_version_description: str,
                     new_source_value_set_version_uuid: str, new_target_value_set_version_uuid: str):
-        url = f"{BASE_URL}/ConceptMaps/actions/new_version_from_previous"
+        url = f"{BASE_URL}/ConceptMaps/{self.uuid}/new_version_from_previous"
 
         # Prepare request data
         data = {
-            "previous_version_uuid": previous_version_uuid,
             "new_version_description": new_version_description,
-            "new_version_num": new_version_num,
             "new_source_value_set_version_uuid": new_source_value_set_version_uuid,
-            "new_target_value_set_version_uuid": new_target_value_set_version_uuid
+            "new_target_value_set_version_uuid": new_target_value_set_version_uuid,
+            "require_review_for_non_equivalent_relationships": False,
+            "require_review_no_maps_not_in_target": False
         }
+
 
         # Make the request
         response = requests.post(url, json=data)
