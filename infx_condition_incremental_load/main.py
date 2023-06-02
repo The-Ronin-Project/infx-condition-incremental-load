@@ -1,10 +1,11 @@
 from typing import List, Dict, Tuple
 from enum import Enum
 from uuid import UUID
-
+import datetime
 from infx_condition_incremental_load.terminology_resources import *
 from infx_condition_incremental_load.core_data_types import *
 
+BASE_URL = config("INTERNAL_TOOLS_API_BASE_URL")
 
 # This process needs to be handled in batches, so we don't create unnecessary versions of terminologies, value sets, concept maps, etc.
 # Batches should be broken up by organization id and resource type
@@ -46,8 +47,8 @@ def process_errors():
 
         # verify source and target value set versions are the latest versions
 
-        source_response = requests.get(f"{base_url}/ValueSets/{source_identifier}/most_recent_active_version")
-        target_response = requests.get(f"{base_url}/ValueSets/{target_identifier}/most_recent_active_version")
+        source_response = requests.get(f"{BASE_URL}/ValueSets/{source_value_set_version}/most_recent_active_version")
+        target_response = requests.get(f"{BASE_URL}/ValueSets/{target_value_set_version}/most_recent_active_version")
 
         if source_response.status_code == 200 and target_response.status_code == 200:
             latest_source_version = source_response.json()
@@ -71,13 +72,22 @@ def process_errors():
         source_terminology = source_terminologies[0]
 
         # Add new codes to terminology
-        # todo: implement logic to create new terminology version, if necessary
-        new_terminology_version = False
-        try:
+        # implement logic to create new terminology version, if necessary (codes are only allowed to be added upto a week after terminology creation)
+
+        now = datetime.datetime.now()
+        difference = now - source_value_set_version.effective_start
+
+        if difference <= datetime.timedelta(days=7):
+            create_new_version() # should line  93 move up here?
+        else:
             source_terminology.load_additional_concepts(concept_list)
-        except Exception as e:
-            new_terminology_version = True
-            raise e
+
+        # new_terminology_version = False
+        # try:
+        #     source_terminology.load_additional_concepts(concept_list)
+        # except Exception as e:
+        #     new_terminology_version = True
+        #     raise e
 
         # todo: Create new value set version
         new_source_value_set_version = source_value_set_version.new_version("new version created by the condition incremental load system")
