@@ -44,9 +44,24 @@ def process_errors():
         source_value_set_version = concept_map_version.source_value_set_version
         target_value_set_version = concept_map_version.target_value_set_version
 
-        # todo: verify source and target value set versions are the latest versions
+        # verify source and target value set versions are the latest versions
 
-        # Ensure only one terminology is used in the source value set
+        source_response = requests.get(f"{base_url}/ValueSets/{source_identifier}/most_recent_active_version")
+        target_response = requests.get(f"{base_url}/ValueSets/{target_identifier}/most_recent_active_version")
+
+        if source_response.status_code == 200 and target_response.status_code == 200:
+            latest_source_version = source_response.json()
+            latest_target_version = target_response.json()
+
+            # Check if the given versions match the latest versions
+            return (
+                    source_value_set_version.uuid == latest_source_version["uuid"]
+                    and target_value_set_version.uuid == latest_target_version["uuid"]
+            )
+
+        return False
+
+            # Ensure only one terminology is used in the source value set
         # Otherwise, we can't determine where to automatically load the new codes
         source_terminologies = source_value_set_version.lookup_terminologies_in_value_set_version()
 
