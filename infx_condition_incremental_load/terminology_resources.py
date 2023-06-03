@@ -313,9 +313,6 @@ class ConceptMapVersion:
         response = requests.post(url, json=data)
         response.raise_for_status()  # ensure we notice bad responses
 
-        # Return the response JSON, in case it's needed
-        return response.json()
-
     def publish(self):
         url = f"{BASE_URL}/ConceptMaps/{self.uuid}/published"
 
